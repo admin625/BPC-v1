@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blueprint Comparison Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #718096;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: block;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            background: #f7fafc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        input[type="file"]:hover {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .file-info {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .status-message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .status-message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .status-message.loading {
+            background: #bee3f8;
+            color: #2c5282;
+            border: 1px solid #90cdf4;
+        }
+
+        .required {
+            color: #e53e3e;
+        }
+
+        .helper-text {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Blueprint Comparison Tool</h1>
+        <p class="subtitle">Upload your blueprints to identify changes and discrepancies</p>
+
+        <form id="blueprintForm">
+            <div class="form-group">
+                <label for="blueprintV1">
+                    Original Blueprint (v1.0) <span class="required">*</span>
+                </label>
+                <input 
+                    type="file" 
+                    id="blueprintV1" 
+                    name="blueprintV1" 
+                    accept=".pdf,image/*"
+                    required
+                >
+                <p class="helper-text">Upload the original version of your blueprint</p>
+            </div>
+
+            <div class="form-group">
+                <label for="blueprintV2">
+                    Updated Blueprint (v2.0) <span class="required">*</span>
+                </label>
+                <input 
+                    type="file" 
+                    id="blueprintV2" 
+                    name="blueprintV2" 
+                    accept=".pdf,image/*"
+                    required
+                >
+                <p class="helper-text">Upload the updated version of your blueprint</p>
+            </div>
+
+            <div class="form-group">
+                <label for="masterKey">
+                    Master Key / Change Log <span class="required">*</span>
+                </label>
+                <input 
+                    type="file" 
+                    id="masterKey" 
+                    name="masterKey" 
+                    accept=".pdf,image/*"
+                    required
+                >
+                <p class="helper-text">Upload the document listing intended changes</p>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                Analyze Blueprints
+            </button>
+
+            <div id="statusMessage" class="status-message"></div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('blueprintForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // Your n8n webhook URL
+        const WEBHOOK_URL = 'https://jmac.app.n8n.cloud/webhook-test/blueprint-comparison';
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Reset status
+            statusMessage.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Analyzing...';
+
+            // Show loading message
+            showStatus('Uploading blueprints and analyzing changes...', 'loading');
+
+            try {
+                // Create FormData object
+                const formData = new FormData();
+                
+                // Add files to FormData
+                const blueprintV1 = document.getElementById('blueprintV1').files[0];
+                const blueprintV2 = document.getElementById('blueprintV2').files[0];
+                const masterKey = document.getElementById('masterKey').files[0];
+
+                if (!blueprintV1 || !blueprintV2 || !masterKey) {
+                    throw new Error('Please select all three files');
+                }
+
+                formData.append('blueprintV1', blueprintV1);
+                formData.append('blueprintV2', blueprintV2);
+                formData.append('masterKey', masterKey);
+
+                // Send to n8n webhook
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                // Show success message
+                showStatus('Analysis complete! Check your email for the detailed comparison report.', 'success');
+                
+                // Reset form after 3 seconds
+                setTimeout(() => {
+                    form.reset();
+                    statusMessage.style.display = 'none';
+                }, 3000);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`Error: ${error.message}. Please try again.`, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Analyze Blueprints';
+            }
+        });
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.style.display = 'block';
+        }
+
+        // File name display on selection
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function(e) {
+                if (this.files.length > 0) {
+                    console.log(`${this.name}: ${this.files[0].name}`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
