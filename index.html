@@ -25,7 +25,7 @@
             background: white;
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 600px;
+            max-width: 650px;
             width: 100%;
             padding: 40px;
         }
@@ -56,37 +56,82 @@
             font-size: 14px;
         }
 
-        .file-input-wrapper {
-            position: relative;
-            display: block;
+        .required {
+            color: #e53e3e;
         }
 
-        input[type="file"] {
-            width: 100%;
-            padding: 12px;
+        /* Drag and Drop Zone Styles */
+        .drop-zone {
             border: 2px dashed #cbd5e0;
-            border-radius: 8px;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
             background: #f7fafc;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 14px;
+            position: relative;
         }
 
-        input[type="file"]:hover {
+        .drop-zone:hover {
             border-color: #667eea;
             background: #edf2f7;
         }
 
-        input[type="file"]:focus {
-            outline: none;
+        .drop-zone.drag-over {
             border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: #e6f0ff;
+            border-style: solid;
         }
 
-        .file-info {
-            margin-top: 6px;
+        .drop-zone.has-file {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+
+        .drop-zone-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            color: #a0aec0;
+        }
+
+        .drop-zone.has-file .drop-zone-icon {
+            color: #48bb78;
+        }
+
+        .drop-zone-text {
+            color: #4a5568;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .drop-zone-subtext {
+            color: #a0aec0;
+            font-size: 12px;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #2d3748;
+            display: none;
+            border: 1px solid #e2e8f0;
+        }
+
+        .drop-zone.has-file .file-name {
+            display: block;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .helper-text {
             font-size: 12px;
             color: #718096;
+            margin-top: 6px;
         }
 
         .submit-btn {
@@ -143,16 +188,6 @@
             color: #2c5282;
             border: 1px solid #90cdf4;
         }
-
-        .required {
-            color: #e53e3e;
-        }
-
-        .helper-text {
-            font-size: 12px;
-            color: #718096;
-            margin-top: 4px;
-        }
     </style>
 </head>
 <body>
@@ -161,42 +196,66 @@
         <p class="subtitle">Upload your blueprints to identify changes and discrepancies</p>
 
         <form id="blueprintForm">
+            <!-- Blueprint V1 -->
             <div class="form-group">
                 <label for="blueprintV1">
                     Original Blueprint (v1.0) <span class="required">*</span>
                 </label>
+                <div class="drop-zone" data-input="blueprintV1">
+                    <div class="drop-zone-icon">📄</div>
+                    <div class="drop-zone-text">Drag & drop file here or click to browse</div>
+                    <div class="drop-zone-subtext">Accepts PDF and image files</div>
+                    <div class="file-name"></div>
+                </div>
                 <input 
                     type="file" 
                     id="blueprintV1" 
                     name="blueprintV1" 
+                    class="file-input"
                     accept=".pdf,image/*"
                     required
                 >
                 <p class="helper-text">Upload the original version of your blueprint</p>
             </div>
 
+            <!-- Blueprint V2 -->
             <div class="form-group">
                 <label for="blueprintV2">
                     Updated Blueprint (v2.0) <span class="required">*</span>
                 </label>
+                <div class="drop-zone" data-input="blueprintV2">
+                    <div class="drop-zone-icon">📄</div>
+                    <div class="drop-zone-text">Drag & drop file here or click to browse</div>
+                    <div class="drop-zone-subtext">Accepts PDF and image files</div>
+                    <div class="file-name"></div>
+                </div>
                 <input 
                     type="file" 
                     id="blueprintV2" 
                     name="blueprintV2" 
+                    class="file-input"
                     accept=".pdf,image/*"
                     required
                 >
                 <p class="helper-text">Upload the updated version of your blueprint</p>
             </div>
 
+            <!-- Master Key -->
             <div class="form-group">
                 <label for="masterKey">
                     Master Key / Change Log <span class="required">*</span>
                 </label>
+                <div class="drop-zone" data-input="masterKey">
+                    <div class="drop-zone-icon">📋</div>
+                    <div class="drop-zone-text">Drag & drop file here or click to browse</div>
+                    <div class="drop-zone-subtext">Accepts PDF and image files</div>
+                    <div class="file-name"></div>
+                </div>
                 <input 
                     type="file" 
                     id="masterKey" 
                     name="masterKey" 
+                    class="file-input"
                     accept=".pdf,image/*"
                     required
                 >
@@ -219,6 +278,64 @@
         // Your n8n webhook URL
         const WEBHOOK_URL = 'https://jmac.app.n8n.cloud/webhook-test/blueprint-comparison';
 
+        // Setup drag and drop for all drop zones
+        document.querySelectorAll('.drop-zone').forEach(dropZone => {
+            const inputId = dropZone.dataset.input;
+            const fileInput = document.getElementById(inputId);
+            const fileNameDisplay = dropZone.querySelector('.file-name');
+
+            // Click to browse
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // Drag over
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            // Drag leave
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+
+            // Drop
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    updateDropZone(dropZone, files[0], fileNameDisplay);
+                }
+            });
+
+            // File input change (when user clicks and selects)
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    updateDropZone(dropZone, e.target.files[0], fileNameDisplay);
+                }
+            });
+        });
+
+        // Update drop zone appearance
+        function updateDropZone(dropZone, file, fileNameDisplay) {
+            dropZone.classList.add('has-file');
+            fileNameDisplay.textContent = `📎 ${file.name} (${formatFileSize(file.size)})`;
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -265,6 +382,9 @@
                 // Reset form after 3 seconds
                 setTimeout(() => {
                     form.reset();
+                    document.querySelectorAll('.drop-zone').forEach(zone => {
+                        zone.classList.remove('has-file');
+                    });
                     statusMessage.style.display = 'none';
                 }, 3000);
 
@@ -282,15 +402,6 @@
             statusMessage.className = `status-message ${type}`;
             statusMessage.style.display = 'block';
         }
-
-        // File name display on selection
-        document.querySelectorAll('input[type="file"]').forEach(input => {
-            input.addEventListener('change', function(e) {
-                if (this.files.length > 0) {
-                    console.log(`${this.name}: ${this.files[0].name}`);
-                }
-            });
-        });
     </script>
 </body>
 </html>
