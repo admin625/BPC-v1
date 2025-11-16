@@ -301,14 +301,18 @@
                     dropZone.classList.remove('drag-over');
                 });
 
-                // Drop
+                // Drop - FIXED VERSION
                 dropZone.addEventListener('drop', (e) => {
                     e.preventDefault();
                     dropZone.classList.remove('drag-over');
 
                     const files = e.dataTransfer.files;
                     if (files.length > 0) {
-                        fileInput.files = files;
+                        // Use DataTransfer to properly set files (fileInput.files is read-only)
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(files[0]);
+                        fileInput.files = dataTransfer.files;
+                        
                         updateDropZone(dropZone, files[0], fileNameDisplay);
                     }
                 });
