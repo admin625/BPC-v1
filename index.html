@@ -1,4 +1,4 @@
-f<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -306,7 +306,7 @@ f<!DOCTYPE html>
         const submitBtn = document.getElementById('submitBtn');
         const statusMessage = document.getElementById('statusMessage');
 
-        // Your n8n webhook URL
+        // REPLACE THIS WITH YOUR ACTUAL WEBHOOK URL
         const WEBHOOK_URL = 'http://localhost:5678/webhook/BPC-blueprint-submit';
 
         // File input handlers
@@ -334,27 +334,71 @@ f<!DOCTYPE html>
             });
         });
 
+        // Helper function to convert file to base64
+        async function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
         // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const formData = new FormData(form);
+            const originalFile = document.getElementById('originalBlueprint').files[0];
+            const revisedFile = document.getElementById('revisedBlueprint').files[0];
+            const specsFile = document.getElementById('specifications').files[0];
             
             // Validate required files
-            if (!formData.get('originalBlueprint').name || !formData.get('revisedBlueprint').name) {
+            if (!originalFile || !revisedFile) {
                 showStatus('Please upload both original and revised blueprints', 'error');
                 return;
             }
 
             // Show loading state
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="loading"></span> Analyzing...';
+            submitBtn.innerHTML = '<span class="loading"></span> Processing PDFs...';
             statusMessage.style.display = 'none';
 
             try {
+                // Convert files to base64
+                const originalBase64 = await fileToBase64(originalFile);
+                const revisedBase64 = await fileToBase64(revisedFile);
+                const specsBase64 = specsFile ? await fileToBase64(specsFile) : null;
+
+                // Update button text
+                submitBtn.innerHTML = '<span class="loading"></span> Analyzing...';
+
+                // Prepare data
+                const data = {
+                    email: document.getElementById('email').value,
+                    projectName: document.getElementById('projectName').value || 'Untitled Project',
+                    originalBlueprint: {
+                        name: originalFile.name,
+                        data: originalBase64
+                    },
+                    revisedBlueprint: {
+                        name: revisedFile.name,
+                        data: revisedBase64
+                    }
+                };
+
+                if (specsBase64) {
+                    data.specifications = {
+                        name: specsFile.name,
+                        data: specsBase64
+                    };
+                }
+
                 const response = await fetch(WEBHOOK_URL, {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
                 });
 
                 if (!response.ok) {
